@@ -16,3 +16,11 @@ export function useScientificRecords(family?: string, limit = 25, offset = 0) {
     retry: false,
   });
 }
+
+export function useModelScores(limit = 10, offset = 0) {
+  return useQuery({
+    queryKey: ["model-scores", limit, offset],
+    queryFn: () => apiClient.modelScores(limit, offset),
+    retry: false,
+  });
+}

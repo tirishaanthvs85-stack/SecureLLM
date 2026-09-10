@@ -45,12 +45,21 @@ class LocalExecutionTests(unittest.TestCase):
             counts = client.get('/dashboard-summary').json()['counts']
             self.assertEqual(counts['evaluations'], 3)
             self.assertEqual(counts['layer1-results'], 9)
-            self.assertEqual(counts['scientific-records'], 5)
+            self.assertEqual(counts['scientific-records'], 7)
+            self.assertEqual(counts['model-scores'], 1)
+            model_scores = client.get('/model-scores').json()
+            self.assertEqual(model_scores['total'], 1)
+            self.assertEqual(model_scores['items'][0]['model_name'], 'test-model')
+            self.assertEqual(model_scores['items'][0]['status'], 'computed')
+            self.assertIn('model_score', model_scores['items'][0]['formula'])
             for record in client.get('/scientific-records').json()['items']:
                 self.assertFalse(record['provenance']['scientifically_validated'])
                 self.assertTrue(record['provenance']['synthetic_fixture'])
                 if record['family'] == 'draa': self.assertIsNone(record['payload']['risk_score'])
                 if record['family'] == 'pri': self.assertIsNone(record['payload']['scalar_pri'])
+                if record['family'] == 'ml':
+                    self.assertEqual(record['status'], 'blocked')
+                    self.assertEqual(record['payload']['reason'], 'no_independent_outcome_labels')
             app.state.session_factory.kw['bind'].dispose()
 
     def test_uninstalled_model_is_rejected_before_execution(self):

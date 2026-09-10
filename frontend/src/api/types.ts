@@ -24,6 +24,30 @@ export interface PaginatedScientificRecords {
   offset: number;
 }
 
+export interface ModelScore {
+  id: string;
+  run_id: string;
+  model_name: string;
+  status: string;
+  model_score: number | null;
+  mean_threat_score: number | null;
+  worst_case_threat_score: number | null;
+  coverage: number;
+  completed_evaluations: number;
+  total_evaluations: number;
+  formula_version: string;
+  formula: Record<string, string>;
+  warnings: string[];
+  provenance: Record<string, unknown>;
+}
+
+export interface PaginatedModelScores {
+  items: ModelScore[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export type ApiState = "loading" | "success" | "not_found" | "failure";
 
 export class ApiError extends Error {

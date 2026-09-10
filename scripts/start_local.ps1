@@ -14,7 +14,7 @@ if (-not (Get-NetTCPConnection -State Listen -LocalPort 8000 -ErrorAction Silent
 }
 if (-not (Get-NetTCPConnection -State Listen -LocalPort 5173 -ErrorAction SilentlyContinue)) {
     $vitePath = Join-Path $projectRoot 'frontend\node_modules\vite\bin\vite.js'
-    Start-Process -FilePath $nodePath -ArgumentList ('"' + $vitePath + '"'),'--host','127.0.0.1','--port','5173','--strictPort' -WorkingDirectory (Join-Path $projectRoot 'frontend') -WindowStyle Hidden -RedirectStandardOutput (Join-Path $logDirectory 'frontend.stdout.log') -RedirectStandardError (Join-Path $logDirectory 'frontend.stderr.log') | Out-Null
+    Start-Process -FilePath $nodePath -ArgumentList ('"' + $vitePath + '"'),'--configLoader','runner','--host','127.0.0.1','--port','5173','--strictPort' -WorkingDirectory (Join-Path $projectRoot 'frontend') -WindowStyle Hidden -RedirectStandardOutput (Join-Path $logDirectory 'frontend.stdout.log') -RedirectStandardError (Join-Path $logDirectory 'frontend.stderr.log') | Out-Null
 }
 $verified = $false
 for ($attempt = 0; $attempt -lt 15; $attempt++) {

@@ -22,3 +22,9 @@ class DashboardApiContractTests(unittest.TestCase):
         response = self.client.get("/scientific-records?limit=0&offset=0")
         self.assertEqual(response.status_code, 422)
         self.assertEqual(response.json(), {"code": "invalid_pagination"})
+
+    def test_model_scores_contract(self) -> None:
+        response = self.client.get("/model-scores")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"items": [], "total": 0, "limit": 25, "offset": 0})
+        self.assertEqual(self.client.get("/dashboard-summary").json()["counts"]["model-scores"], 0)

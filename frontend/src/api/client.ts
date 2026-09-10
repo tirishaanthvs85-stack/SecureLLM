@@ -1,5 +1,5 @@
 import { endpoints } from "./endpoints";
-import { ApiError, type HealthStatus, type PaginatedScientificRecords, type ReadinessStatus } from "./types";
+import { ApiError, type HealthStatus, type PaginatedModelScores, type PaginatedScientificRecords, type ReadinessStatus } from "./types";
 
 const baseUrl = import.meta.env.VITE_SECURELLM_API_BASE_URL ?? "";
 
@@ -31,6 +31,7 @@ export const apiClient = {
     return request<{ items: Record<string, unknown>[]; total: number; limit: number; offset: number }>(`/${resource}?${query}`);
   },
   summary: () => request<{ counts: Record<string, number> }>("/dashboard-summary"),
+  modelScores: (limit = 10, offset = 0) => request<PaginatedModelScores>(`/model-scores?limit=${limit}&offset=${offset}`),
   health: () => request<HealthStatus>(endpoints.health),
   ready: () => request<ReadinessStatus>(endpoints.ready),
   scientificRecords: (options: { family?: string; limit: number; offset: number }) => {

@@ -45,8 +45,42 @@ def register_resources(app, factory):
     def summary():
         with factory() as session:
             entities = {**RESOURCES, "scientific-records": models.ScientificRecordEntity}
-            return {"counts": {name: session.scalar(select(func.count()).select_from(entity))
-                               for name, entity in entities.items()}}
+            counts = {name: session.scalar(select(func.count()).select_from(entity))
+                      for name, entity in entities.items()}
+            counts["model-scores"] = session.scalar(select(func.count()).select_from(models.ScientificRecordEntity).where(models.ScientificRecordEntity.family == "model_score"))
+            return {"counts": counts}
+
+    @app.get("/model-scores")
+    def model_scores(limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=0),
+                     sort: str = "created_at", direction: str = "desc"):
+        if sort not in {"id", "created_at"} or direction not in {"asc", "desc"}:
+            raise HTTPException(422, "Invalid sort")
+        statement = select(models.ScientificRecordEntity).where(models.ScientificRecordEntity.family == "model_score")
+        with factory() as session:
+            total = session.scalar(select(func.count()).select_from(statement.subquery()))
+            column = getattr(models.ScientificRecordEntity, sort)
+            rows = session.scalars(statement.order_by(column.desc() if direction == "desc" else column.asc(),
+                                                      models.ScientificRecordEntity.id).limit(limit).offset(offset))
+            items = []
+            for row in rows:
+                payload = row.payload
+                items.append({
+                    "id": row.id,
+                    "run_id": payload.get("run_id"),
+                    "model_name": payload.get("model_name"),
+                    "status": row.status,
+                    "model_score": payload.get("model_score"),
+                    "mean_threat_score": payload.get("mean_threat_score"),
+                    "worst_case_threat_score": payload.get("worst_case_threat_score"),
+                    "coverage": payload.get("coverage"),
+                    "completed_evaluations": payload.get("completed_evaluations"),
+                    "total_evaluations": payload.get("total_evaluations"),
+                    "formula_version": payload.get("formula_version"),
+                    "formula": payload.get("formula"),
+                    "warnings": payload.get("warnings", []),
+                    "provenance": redact_configuration(row.provenance),
+                })
+            return {"items": items, "total": total, "limit": limit, "offset": offset}
 
     def register(name, entity):
         allowed = FILTERS.intersection(entity.__table__.columns.keys())
