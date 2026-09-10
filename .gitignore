@@ -1,5 +1,12 @@
 # Python
 __pycache__/
+frontend/node_modules/
+frontend/dist/
+frontend/.npm-cache/
+.tmp/
+*.localhost.log
+*.localhost.error.log
+securellmbench.db
 *.py[cod]
 *.egg-info/
 .pytest_cache/

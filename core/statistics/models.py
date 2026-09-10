@@ -13,7 +13,7 @@ class GroupingPurpose(StrEnum): DESIGN="design"; PAIRING="pairing"; RESAMPLING="
 class ResamplingMethod(StrEnum): NONE="none"; PAIRED_BOOTSTRAP="paired_bootstrap"; GROUPED_BOOTSTRAP="grouped_bootstrap"; HIERARCHICAL_BOOTSTRAP="hierarchical_bootstrap"; PERCENTILE_BOOTSTRAP="percentile_bootstrap"; BCA_BOOTSTRAP="bca_bootstrap"; PERMUTATION="permutation"; RANDOMIZATION="randomization"; CUSTOM="custom"
 class MultiplicityMethod(StrEnum): NONE="none"; HOLM="holm"; BONFERRONI="bonferroni"; BENJAMINI_HOCHBERG="benjamini_hochberg"; HIERARCHICAL="hierarchical"; PREREGISTERED_PRIMARY="preregistered_primary"; CUSTOM="custom"
 class AssumptionStatus(StrEnum): UNASSESSED="unassessed"; SATISFIED="satisfied"; VIOLATED="violated"; UNCERTAIN="uncertain"; NOT_APPLICABLE="not_applicable"
-class ResultStatus(StrEnum): NOT_COMPUTED="not_computed"
+class ResultStatus(StrEnum): NOT_COMPUTED="not_computed"; COMPUTED="computed"; UNDEFINED="undefined"; INSUFFICIENT_DATA="insufficient_data"; INVALID_INPUT="invalid_input"; NOT_APPLICABLE="not_applicable"; NUMERICAL_FAILURE="numerical_failure"
 class RegistrationStatus(StrEnum): DRAFT="draft"; FROZEN="frozen"; AMENDED="amended"; SUPERSEDED="superseded"
 
 @dataclass(frozen=True, slots=True)

@@ -1,6 +1,12 @@
 """Phase 10A metadata-only smoke check; it performs no statistical inference."""
 from core.statistics.models import *
 from core.statistics.serialization import dumps,loads_plan,schema_hash
+from core.statistics.descriptive import summarize
+from core.statistics.differences import paired_differences,DifferenceOrientation
+from core.statistics.correlation import pearson,spearman
+from core.statistics.parametric import paired_t,welch_t
+from core.statistics.rank import mann_whitney,wilcoxon
+from core.statistics.bootstrap import BootstrapConfig,bootstrap
 def main():
  h=HypothesisDefinition("bsda-h","bsda","Do components change under matched attack?","estimation",AnalysisMode.DESCRIPTIVE,ScientificStatus.EMPIRICAL_HYPOTHESIS,"declared future population","matched base cases",provenance={"estimand_id":"bsda-e"})
  e=EstimandDefinition("bsda-e","paired component difference","raw source-native component difference","matched component difference","distance",None,"declared future population","baseline vs attacked")
@@ -8,5 +14,7 @@ def main():
  assert loads_plan(dumps(plan))==plan
  artifact=StatisticalExperimentArtifact("statistics-smoke-experiment",plan.plan_id,schema_hash(plan),plan.plan_version,"bsda",plan.readiness,{}, {},{"python":"3.11"},"metadata_created")
  result=StatisticalResultRecord("statistics-smoke-result",artifact.experiment_id,h.hypothesis_id,e.estimand_id,"paired_t_test")
- print({"phase":"10A","mode":"statistical_planning_only","engineering_ready":plan.readiness.engineering_ready,"plan_ready":plan.readiness.plan_ready,"data_ready":plan.readiness.data_ready,"analysis_ready":plan.readiness.analysis_ready,"claim_validated":plan.readiness.claim_validated,"inference_computed":result.result_status is not ResultStatus.NOT_COMPUTED})
+ d=summarize((1,2,3)); pair=paired_differences((2,4,6),(1,2,3),DifferenceOrientation.X_MINUS_Y,explicit_positional_pairing=True); p=pearson((1,2,3),(2,4,6),pairing_declared=True); s=spearman((1,2,3),(3,2,1),pairing_declared=True)
+ t=paired_t((2,4),(1,2),DifferenceOrientation.X_MINUS_Y,pairing_declared=True);u=mann_whitney((3,4),(1,2),independent_declared=True);b=bootstrap((1,2,3),lambda x:sum(x)/len(x),BootstrapConfig(10,.8,"mean",seed=1),independent_declared=True)
+ print({"phase_10b2":t.computation_status.value=="computed","phase_10b3":u.computation_status.value=="computed","phase_10b4":b.status.value=="computed","phase_10c_safe_subset":False,"phase_10d_infrastructure":True,"scientific_claims_validated":False})
 if __name__=="__main__": main()

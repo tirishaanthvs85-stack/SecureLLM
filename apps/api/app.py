@@ -1,6 +1,4 @@
-"""Framework-neutral API composition placeholder."""
-from core.health import health_status
+"""Compatibility entry point for the Phase 11 FastAPI application."""
+from apps.api.main import app, create_app
 class ApiApplication:
-    """Minimal API surface until a web framework is selected."""
-    def health(self) -> dict[str, str]:
-        return health_status()
+ def health(self): return {"service":"securellmbench","status":"ok"}
