@@ -1,71 +1,88 @@
 # SecureLLMBench
 
-SecureLLMBench is a modular framework for benchmarking the security and safety
-properties of large language models. This initial repository establishes the
-application boundaries and contracts; it intentionally does not contain research
-algorithms, model integrations, a database, or a dashboard.
+SecureLLMBench is a modular Python 3.11+ framework for traceable LLM security and safety benchmarking research. The current repository includes real engineering implementations for dataset ingestion, local inference, benchmark execution, detector evidence, Layer 2 judging infrastructure, BSDA, Recovery Capability, SAEA, DRAA/PRI evidence profiles, ML infrastructure, statistics, persistence, API, and dashboard exploration.
+
+The repository is not a source of scientific claims by itself. Passing tests and fixture dry-runs validate software behavior only. Paper results require real datasets, installed target models, real judge/evaluation providers, approved outcome labels where needed, and explicit statistical review.
 
 ## Requirements
 
 - Python 3.11 or later
+- For this workspace: `F:\SecureLLM\.venv\Scripts\python.exe`
+- Optional local model execution through Ollama with models installed before running experiments
+- Optional semantic embeddings through `pip install -e ".[semantic]"`
 
-## Quick start
-
-```powershell
-python -m unittest discover -s tests -p "test_*.py"
-python -m scripts.smoke_check
-```
-
-## Architecture
-
-The `core` package contains framework-independent application contracts and
-orchestration boundaries. Infrastructure adapters (model providers, file formats,
-web frameworks, databases) should depend on these contracts, not the reverse.
-See [docs/architecture.md](docs/architecture.md) for the intended direction of
-dependencies.
-
-## Project status
-
-This is a repository skeleton. Public interfaces are deliberately small and are
-expected to evolve alongside the research design.
-
-## Dataset ingestion
-
-The dataset subsystem supports JSON, JSONL, and CSV through source adapters and
-normalizes data into the `Dataset` and `DatasetRecord` schemas. Records accept
-optional `id`, `prompt`, `category`, `attack_type`, `source`, `language`,
-`difficulty`, and `metadata` fields; each record must provide an `id` or a
-`prompt`. See the module docstrings in `core/dataset/` for the supported APIs.
-
-## Semantic dataset analysis
-
-Install CPU-compatible optional dependencies when semantic embeddings or DBSCAN
-clustering are required:
+## Quick Start
 
 ```powershell
-pip install -e ".[semantic]"
+$env:TEMP='F:\SecureLLM.tmp'
+$env:TMP='F:\SecureLLM.tmp'
+F:\SecureLLM\.venv\Scripts\python.exe -m pytest
+F:\SecureLLM\.venv\Scripts\python.exe scripts\api_smoke.py
+powershell -ExecutionPolicy Bypass -File scripts\start_local.ps1
 ```
 
-`hdbscan` remains separate and optional: `pip install -e ".[semantic,hdbscan]"`.
-The DQI is an exploratory, configurable research metric; it is **not** a
-scientifically validated dataset-quality score.
+Dashboard:
 
-Run the dependency-free end-to-end processor:
+- Backend: `http://127.0.0.1:8000`
+- Frontend: `http://127.0.0.1:5173`
+
+## Implemented
+
+- Dataset ingestion and preprocessing for JSON, JSONL, and CSV.
+- Optional semantic dataset analysis and exploratory DQI.
+- Provider-neutral model registry and inference contracts.
+- Deterministic mock inference for tests.
+- Local Ollama inference for installed models only; no automatic downloads.
+- Optional local Transformers adapter.
+- Benchmark execution and JSON run storage.
+- Layer 1 rule, keyword, and pattern detector evidence.
+- Layer 2 judge contracts, orchestration, mock provider, and local Ollama judge provider.
+- BSDA four-component profile computation plus concrete semantic/safety/instruction adapters.
+- Recovery Capability runtime following `docs/RECOVERY_CAPABILITY_IMPLEMENTATION_SPEC.md`.
+- SAEA computation over pre-generated matched behavioral states.
+- DRAA Modes A/B evidence transport with `risk_score = None`.
+- PRI Modes A/B profile records with `scalar_pri = None`.
+- ML prediction schemas, leakage checks, grouped splits, train-only preprocessing, and engineering baselines.
+- Descriptive, correlation, rank, bootstrap, and parametric statistics utilities with explicit undefined states.
+- SQLAlchemy persistence, FastAPI read APIs, local run API, and dashboard.
+- Paper 2026 fixture dry-run and analysis scaffold under `experiments/paper_2026/`.
+
+## Not Scientifically Validated
+
+- BSDA, RC, and SAEA empirical novelty or effectiveness claims.
+- DRAA scalar risk; it is intentionally not implemented.
+- PRI scalar score or model ranking; it is intentionally not implemented.
+- ML prediction claims without independent labels and leakage-reviewed task definitions.
+- Attack success rate without an explicit versioned outcome-evaluation contract.
+- Layer 1 detector evidence as ground truth.
+- Layer 2 judge output as ground truth or calibrated probability.
+
+## Paper Dry-Run
+
+Fixture dry-run:
 
 ```powershell
-python -m scripts.process_dataset data/raw/example.json
+F:\SecureLLM\.venv\Scripts\python.exe experiments\paper_2026\run_experiment.py --fixture-dry-run
+F:\SecureLLM\.venv\Scripts\python.exe experiments\paper_2026\analyze_results.py --input experiments\paper_2026\outputs\fixture_trace.json
 ```
 
-## Model registry and inference
-
-`ModelMetadata`, `ModelRegistry`, and `InferenceProvider` keep benchmark code
-provider-neutral. The deterministic `MockInferenceProvider` runs entirely on CPU
-with no model download. The optional local Transformers adapter is lazy-loaded,
-uses CPU by default, and uses `local_files_only=True` by default:
+Local Ollama run, when models are already installed:
 
 ```powershell
-pip install -e ".[transformers]"
+F:\SecureLLM\.venv\Scripts\python.exe experiments\paper_2026\run_experiment.py --target-model qwen3.5:2b --judge-model gemma3:4b --output experiments\paper_2026\outputs\local_trace.json
+F:\SecureLLM\.venv\Scripts\python.exe experiments\paper_2026\analyze_results.py --input experiments\paper_2026\outputs\local_trace.json
 ```
 
-Remote/API providers are represented by the `ApiInferenceProvider` protocol; no
-remote provider is implemented yet.
+See [PAPER_REPRODUCIBILITY.md](docs/PAPER_REPRODUCIBILITY.md) for the full trace and blocker matrix.
+
+## Frontend
+
+```powershell
+cd frontend
+npm run typecheck
+npm run lint
+npm test -- --run
+npm run build
+```
+
+The dashboard displays persisted records and provenance. It separates empty data, missing prerequisites, API failures, and scientific non-validation states.

@@ -1,4 +1,11 @@
 """Phase 10A metadata-only smoke check; it performs no statistical inference."""
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from core.statistics.models import *
 from core.statistics.serialization import dumps,loads_plan,schema_hash
 from core.statistics.descriptive import summarize
