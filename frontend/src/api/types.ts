@@ -48,6 +48,48 @@ export interface PaginatedModelScores {
   offset: number;
 }
 
+export interface RuntimeModel {
+  name: string;
+  digest: string;
+  details?: { parameter_size?: string; quantization_level?: string };
+}
+
+export interface RuntimeModelsResponse {
+  available: boolean;
+  execution_enabled: boolean;
+  reason?: string;
+  items: RuntimeModel[];
+}
+
+export interface ShowcaseModel {
+  id: string;
+  name: string;
+  ollama_model: string;
+  description: string;
+  access: string;
+}
+
+export interface ShowcaseModelsResponse {
+  items: ShowcaseModel[];
+  remote_execution_enabled: boolean;
+  note: string;
+}
+
+export interface BenchmarkJob {
+  id: string;
+  model: string;
+  provider: "ollama-local" | "openai-compatible";
+  status: string;
+  error?: string;
+}
+
+export interface BenchmarkRunInput {
+  model: string;
+  provider: "ollama-local" | "openai-compatible";
+  endpoint?: string;
+  api_key?: string;
+}
+
 export type ApiState = "loading" | "success" | "not_found" | "failure";
 
 export class ApiError extends Error {

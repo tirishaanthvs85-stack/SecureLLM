@@ -9,7 +9,7 @@ const cards = [["datasets", "Datasets", "/datasets"], ["models", "Model configur
 export function Overview() {
   const query = useQuery({ queryKey: ["dashboard-summary"], queryFn: apiClient.summary, retry: false });
   const scores = useModelScores(5);
-  return <section><div className="eyebrow">SecureLLMBench / Research workspace</div><h1>Evidence, in perspective.</h1><p className="lede">Explore the datasets, experiments and source evidence behind your research.</p>
+  return <section><div className="eyebrow">SecureLLMBench / Research workspace</div><h1>Evidence, in perspective.</h1><p className="lede">Connect a model, run the available pilot suite, and inspect the persisted evidence behind every result.</p><p><Link className="primary-button inline-action" to="/benchmark">Open benchmark workspace</Link></p>
     {query.isLoading && <LoadingState />}{query.isError && <ErrorState error={query.error} />}
     {query.data && <div className="stat-grid">{cards.map(([key, label, path]) => <Link to={path} key={key}><article><span>{label}</span><strong>{query.data.counts[key]}</strong><small>Explore records →</small></article></Link>)}</div>}
     <div className="section-divider" />

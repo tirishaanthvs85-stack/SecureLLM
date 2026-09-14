@@ -9,6 +9,7 @@ The repository is not a source of scientific claims by itself. Passing tests and
 - Python 3.11 or later
 - For this workspace: `F:\SecureLLM\.venv\Scripts\python.exe`
 - Optional local model execution through Ollama with models installed before running experiments
+- Optional OpenAI-compatible endpoint execution, enabled only by the server operator
 - Optional semantic embeddings through `pip install -e ".[semantic]"`
 
 ## Quick Start
@@ -33,6 +34,8 @@ Dashboard:
 - Provider-neutral model registry and inference contracts.
 - Deterministic mock inference for tests.
 - Local Ollama inference for installed models only; no automatic downloads.
+- A dedicated dashboard benchmark workspace with three open-weight Ollama showcase presets (Gemma 3 4B, Qwen 3.5 2B, and Llama 3.2 3B), installed-model discovery, live job state, and links to saved evidence.
+- Opt-in OpenAI-compatible inference for user-supplied HTTPS endpoints. Credentials are held only by the active job and are excluded from persisted configurations, responses, logs, and dashboard records.
 - Optional local Transformers adapter.
 - Benchmark execution and JSON run storage.
 - Layer 1 rule, keyword, and pattern detector evidence.
@@ -56,6 +59,14 @@ Dashboard:
 - Attack success rate without an explicit versioned outcome-evaluation contract.
 - Layer 1 detector evidence as ground truth.
 - Layer 2 judge output as ground truth or calibrated probability.
+
+## Running a Dashboard Benchmark
+
+Open **Run benchmark** in the dashboard. A local run can use only a model already installed in the local Ollama service; the dashboard never downloads a model. The three showcase entries are selectable presets, not claims that those models are installed, tested, or validated.
+
+The local startup script enables loopback-only local execution. To allow an OpenAI-compatible endpoint in a controlled deployment, the server operator must explicitly set `SECURELLM_ENABLE_REMOTE_RUNS=1` before starting the API. Remote URLs must use HTTPS unless they target `localhost`, `127.0.0.1`, or `::1`. A submitted key is used for the active request only and is not written to the database or returned by the API.
+
+Each current dashboard run executes the repository's identified three-record engineering example. Its saved response, latency, detector evidence, formula, and provenance are reviewable in the dashboard. It is a pilot implementation, not a validated security benchmark or scientific model ranking.
 
 ## Paper Dry-Run
 

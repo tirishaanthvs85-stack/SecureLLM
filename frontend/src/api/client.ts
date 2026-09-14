@@ -1,5 +1,5 @@
 import { endpoints } from "./endpoints";
-import { ApiError, type HealthStatus, type PaginatedModelScores, type PaginatedScientificRecords, type ReadinessStatus } from "./types";
+import { ApiError, type BenchmarkJob, type BenchmarkRunInput, type HealthStatus, type PaginatedModelScores, type PaginatedScientificRecords, type ReadinessStatus, type RuntimeModelsResponse, type ShowcaseModelsResponse } from "./types";
 
 const baseUrl = import.meta.env.VITE_SECURELLM_API_BASE_URL ?? "";
 
@@ -22,9 +22,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const apiClient = {
-  runtimeModels: () => request<{ available: boolean; execution_enabled: boolean; reason?: string; items: { name: string; digest: string; details?: { parameter_size?: string; quantization_level?: string } }[] }>("/runtime-models"),
-  jobs: () => request<{ items: { id: string; model: string; status: string; error?: string }[] }>("/benchmark-jobs"),
-  startRun: (model: string) => request<{ id: string; status: string }>("/internal/benchmark-jobs", { method: "POST", headers: { "Content-Type": "application/json", "X-SecureLLM-Local": "1" }, body: JSON.stringify({ model }) }),
+  runtimeModels: () => request<RuntimeModelsResponse>("/runtime-models"),
+  showcaseModels: () => request<ShowcaseModelsResponse>("/showcase-models"),
+  jobs: () => request<{ items: BenchmarkJob[] }>("/benchmark-jobs"),
+  startRun: (input: BenchmarkRunInput) => request<BenchmarkJob>("/internal/benchmark-jobs", { method: "POST", headers: { "Content-Type": "application/json", "X-SecureLLM-Local": "1" }, body: JSON.stringify(input) }),
   resources: (resource: string, offset = 0, filterBy?: string, value?: string) => {
     const query = new URLSearchParams({ limit: "25", offset: String(offset) });
     if (filterBy && value !== undefined) { query.set("filter_by", filterBy); query.set("value", value); }

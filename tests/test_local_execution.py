@@ -87,3 +87,23 @@ class LocalExecutionTests(unittest.TestCase):
             result = client.get('/runtime-models').json()
             self.assertTrue(result['available'])
             self.assertEqual(result['items'], [])
+
+    def test_showcase_catalog_and_remote_execution_gate(self):
+        client = TestClient(create_app('sqlite:///:memory:', enable_local_runs=True), client=('127.0.0.1', 50000))
+        catalog = client.get('/showcase-models').json()
+        self.assertEqual(len(catalog['items']), 3)
+        self.assertFalse(catalog['remote_execution_enabled'])
+        response = client.post('/internal/benchmark-jobs', json={
+            'model': 'remote-model', 'provider': 'openai-compatible', 'endpoint': 'https://example.test/v1', 'api_key': 'ephemeral'
+        }, headers={'X-SecureLLM-Local': '1'})
+        self.assertEqual(response.status_code, 403)
+
+    def test_remote_input_never_appears_in_job_response(self):
+        client = TestClient(create_app('sqlite:///:memory:', enable_local_runs=True, enable_remote_runs=True), client=('127.0.0.1', 50000))
+        with patch('apps.api.local_execution.threading.Thread'):
+            response = client.post('/internal/benchmark-jobs', json={
+                'model': 'remote-model', 'provider': 'openai-compatible', 'endpoint': 'https://example.test/v1', 'api_key': 'ephemeral'
+            }, headers={'X-SecureLLM-Local': '1'})
+        self.assertEqual(response.status_code, 202)
+        self.assertNotIn('ephemeral', response.text)
+        self.assertEqual(response.json()['provider'], 'openai-compatible')

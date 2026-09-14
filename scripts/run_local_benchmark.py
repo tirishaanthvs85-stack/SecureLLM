@@ -22,6 +22,7 @@ from core.detection.detectors import RegexDetector, RegexRule, KeywordDetector, 
 from core.draa import EvidenceExtractor
 from core.inference.contracts import GenerationConfig
 from core.inference.ollama_provider import OllamaProvider, installed_models
+from core.inference.openai_compatible_provider import OpenAICompatibleProvider, normalize_endpoint
 from core.metrics.model_scoring import ml_readiness_payload, score_evaluation, score_model_run
 from core.models.registry import InMemoryModelRegistry, ModelMetadata
 from core.persistence.database import make_engine
@@ -33,11 +34,25 @@ from core.statistics.descriptive import summarize
 from scripts.import_repository_data import import_example
 
 
-def run_model(model_name, *, database_url=None, run_id=None, provider=None, inventory=None, output_directory=None):
-    inventory = installed_models() if inventory is None else inventory
-    info = next((m for m in inventory if m['name'] == model_name), None)
-    if info is None:
-        raise ValueError('Choose an installed Ollama model; automatic downloads are disabled')
+def run_model(model_name, *, database_url=None, run_id=None, provider=None, inventory=None, output_directory=None,
+              provider_kind='ollama-local', endpoint=None, api_key=None):
+    if provider_kind not in {'ollama-local', 'openai-compatible'}:
+        raise ValueError('Choose a supported model provider')
+    if provider_kind == 'ollama-local':
+        inventory = installed_models() if inventory is None else inventory
+        info = next((m for m in inventory if m['name'] == model_name), None)
+        if info is None:
+            raise ValueError('Choose an installed Ollama model; automatic downloads are disabled')
+        execution_provider = provider or OllamaProvider(seed=2026)
+        model_provider = 'ollama-local'
+        endpoint_provenance = None
+    else:
+        if not endpoint:
+            raise ValueError('Provide an OpenAI-compatible endpoint')
+        endpoint_provenance = normalize_endpoint(endpoint)
+        info = {'name': model_name, 'digest': None, 'capabilities': [], 'details': {}}
+        execution_provider = provider or OpenAICompatibleProvider(endpoint_provenance, api_key=api_key)
+        model_provider = 'openai-compatible'
     run_id = run_id or uuid.uuid4().hex
     if not run_id.isalnum():
         raise ValueError('Run identity must be alphanumeric')
@@ -45,14 +60,16 @@ def run_model(model_name, *, database_url=None, run_id=None, provider=None, inve
     source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     dataset = TextNormalizer().process(JsonDatasetLoader().load(source))
     generation = GenerationConfig(temperature=0, max_new_tokens=128, timeout_seconds=180)
-    model = ModelMetadata(model_name, 'ollama-local', info['digest'], capabilities=frozenset(info.get('capabilities', [])))
-    config_id = hashlib.sha256(json.dumps({'model': model_name, 'digest': info['digest'], 'generation': asdict(generation), 'seed': 2026}, sort_keys=True).encode()).hexdigest()
+    model = ModelMetadata(model_name, model_provider, info['digest'], capabilities=frozenset(info.get('capabilities', [])))
+    config_id = hashlib.sha256(json.dumps({'model': model_name, 'provider': model_provider, 'digest': info['digest'],
+                                           'endpoint': endpoint_provenance, 'generation': asdict(generation), 'seed': 2026}, sort_keys=True).encode()).hexdigest()
     provenance = {'source': 'data/raw/example.json', 'source_sha256': source_hash,
         'kind': 'local_model_pilot', 'scientifically_validated': False, 'synthetic_fixture': provider is not None,
         'dataset_kind': 'repository_example', 'normalization': 'TextNormalizer',
         'detector_recipe': 'scripts/end_to_end_smoke.py',
         'detector_limitation': 'Existing smoke-rule heuristic signals applied to actual responses; not security verdicts.',
-        'model_digest': info['digest'], 'benchmark_run_id': run_id}
+        'model_digest': info['digest'], 'provider': model_provider, 'endpoint': endpoint_provenance,
+        'benchmark_run_id': run_id}
     engine = make_engine(database_url or f"sqlite:///{ROOT / 'securellmbench.db'}")
     try:
         with Session(engine) as session:
@@ -60,7 +77,7 @@ def run_model(model_name, *, database_url=None, run_id=None, provider=None, inve
         store = JsonBenchmarkStore(output_directory or ROOT / 'experiments/local-runs')
         if store.path_for(run_id).exists():
             raise ValueError('Run artifact already exists; use a new run identity')
-        run = BenchmarkEngine(InMemoryModelRegistry((model,)), provider or OllamaProvider(seed=2026), store).run(
+        run = BenchmarkEngine(InMemoryModelRegistry((model,)), execution_provider, store).run(
             dataset, BenchmarkConfig(model_name, run_id=run_id, generation=generation, seed=2026, concurrency=1))
         # Reuse the exact existing smoke-rule recipe; do not introduce a new security score.
         detectors = (
@@ -74,7 +91,8 @@ def run_model(model_name, *, database_url=None, run_id=None, provider=None, inve
             if session.get(ModelConfigEntity, config_id) is None:
                 session.add(ModelConfigEntity(id=config_id, model_name=model_name, payload={
                     'provider': model.provider, 'digest': model.version, 'generation': asdict(generation), 'seed': 2026,
-                    'details': info.get('details', {}), 'provenance': {k: v for k, v in provenance.items() if k != 'benchmark_run_id'}}))
+                    'details': info.get('details', {}), 'endpoint': endpoint_provenance,
+                    'provenance': {k: v for k, v in provenance.items() if k != 'benchmark_run_id'}}))
                 session.flush()
             session.add(BenchmarkRunEntity(id=run_id, model_config_id=config_id, dataset_version_id=f'repository:example:{source_hash}',
                 status=run.status, payload={'generation': asdict(generation), 'seed': 2026, 'provenance': provenance,
@@ -131,7 +149,7 @@ def run_model(model_name, *, database_url=None, run_id=None, provider=None, inve
                 status=summary.computation_status.value, domain=summary,
                 provenance={**provenance, 'measurement': 'client_elapsed_latency_ms', 'units': 'ms', 'includes_model_loading': True,
                             'missing_responses': len(run.results) - len(latencies), 'descriptive_only': True}))
-        return {'run_id': run_id, 'model': model_name, 'status': run.status, 'evaluations': len(run.results),
+        return {'run_id': run_id, 'model': model_name, 'provider': model_provider, 'status': run.status, 'evaluations': len(run.results),
                 'completed': sum(e.status == 'completed' for e in run.results)}
     finally:
         engine.dispose()

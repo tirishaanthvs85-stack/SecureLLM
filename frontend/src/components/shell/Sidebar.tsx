@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 
 const navigation = [
-  ["/", "Overview"], ["/models", "Models"], ["/datasets", "Datasets"], ["/runs", "Benchmark runs"], ["/evaluations", "Evaluation results"], ["/security", "Security analysis"],
+  ["/", "Overview"], ["/benchmark", "Run benchmark"], ["/models", "Models"], ["/datasets", "Datasets"], ["/runs", "Benchmark runs"], ["/evaluations", "Evaluation results"], ["/security", "Security analysis"],
   ["/dataset-versions", "Dataset versions"], ["/layer2", "Layer 2 evidence"], ["/reviews", "Scientific reviews"],
   ["/metrics/bsda", "BSDA"], ["/metrics/recovery", "Recovery capability"], ["/metrics/saea", "SAEA"], ["/metrics/draa", "DRAA"], ["/metrics/pri", "PRI"], ["/metrics/dqi", "DQI"],
   ["/ml", "ML prediction"], ["/statistics", "Statistical analysis"], ["/comparison", "Model comparison"], ["/records", "Experiment details"],

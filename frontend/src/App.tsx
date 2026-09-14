@@ -6,11 +6,13 @@ import { Overview } from "./pages/Overview";
 import { ScientificRecordsPage } from "./pages/ScientificRecordsPage";
 import { ModelsPage } from "./pages/ModelsPage";
 import { ComparisonPage } from "./pages/ComparisonPage";
+import { BenchmarkPage } from "./pages/BenchmarkPage";
 
 export default function App() {
   return <AppShell><Routes>
     <Route path="/" element={<Overview />} />
     <Route path="/models" element={<ModelsPage />} />
+    <Route path="/benchmark" element={<BenchmarkPage />} />
     <Route path="/datasets" element={<EntityPage title="Datasets" resource="datasets" description="Source datasets with provenance. Repository examples are engineering inputs, not validated research corpora." />} />
     <Route path="/runs" element={<EntityPage title="Benchmark runs" resource="benchmark-runs" description="Recorded executions and their original status. No runs are launched here." />} />
     <Route path="/evaluations" element={<EntityPage title="Evaluation results" resource="evaluations" description="Stored responses and execution status, with links to source-native layer evidence." />} />
