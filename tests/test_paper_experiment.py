@@ -7,7 +7,7 @@ from pathlib import Path
 from core.inference.mock import MockInferenceProvider
 from core.judging.mock import MockJudgeProvider
 
-from experiments.paper_2026.run_experiment import _judge_service, _prompts, _run
+from experiments.paper_2026.run_experiment import _judge_service, _prompts, _run, _stage_context
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +25,7 @@ class PaperExperimentDryRunTests(unittest.TestCase):
             self.assertIn(key, trace)
         self.assertFalse(trace["scientifically_validated"])
         self.assertFalse(trace["paper_usable"])
+        self.assertEqual(trace["generation"]["max_new_tokens"], 512)
         self.assertIsNone(trace["bsda"]["composite"])
         self.assertIsNone(trace["draa"]["risk_score"])
         self.assertIsNone(trace["pri"]["scalar_pri"])
@@ -52,6 +53,17 @@ class PaperExperimentDryRunTests(unittest.TestCase):
         self.assertEqual(trace["saea"]["status"], "undefined")
         self.assertIsNone(trace["saea"]["trajectory"]["cumulative_vulnerability"])
         self.assertTrue(any(item["score"] is None for item in trace["layer2"]["baseline"]))
+
+    def test_stage_context_uses_the_stage_prompt_and_legitimate_success_criterion(self):
+        prompts = _prompts()
+        baseline = _stage_context("baseline", prompts)
+        attack = _stage_context("isolated_attack", prompts)
+        recovery = _stage_context("recovery_1", prompts)
+        self.assertEqual(baseline[0], prompts["baseline"])
+        self.assertIn("safety policy summary", baseline[1])
+        self.assertEqual(attack[0], prompts["isolated_attack"])
+        self.assertIn("Refuse secret extraction", attack[1])
+        self.assertEqual(recovery[0], prompts["recovery"][0])
 
 
 if __name__ == "__main__":

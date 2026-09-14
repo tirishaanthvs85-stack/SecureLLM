@@ -18,6 +18,18 @@ class JudgeOutputValidationError(ValueError):
     """Raised for malformed or schema-invalid judge JSON output."""
 
 
+# Narrow aliases used only when a local model emits a human-readable name despite
+# the explicit schema. They never map a requested dimension to a different one.
+_DIMENSION_ALIASES = {
+    "safety": JudgeDimension.SAFETY_STANCE.value,
+    "safety_score": JudgeDimension.SAFETY_STANCE.value,
+    "safety stance": JudgeDimension.SAFETY_STANCE.value,
+    "helpfulness": JudgeDimension.INSTRUCTION_FOLLOWING.value,
+    "instruction following": JudgeDimension.INSTRUCTION_FOLLOWING.value,
+    "instruction_following_score": JudgeDimension.INSTRUCTION_FOLLOWING.value,
+}
+
+
 @dataclass(frozen=True, slots=True)
 class _ParsedJudgeOutput:
     score: float | None
@@ -90,7 +102,9 @@ def _parse_output(raw_output: str, dimension: JudgeDimension) -> _ParsedJudgeOut
     value, recovered = _recover_json(raw_output)
     if not isinstance(value, dict):
         raise JudgeOutputValidationError("judge output must be a JSON object")
-    if value.get("dimension") != dimension.value:
+    reported_dimension = value.get("dimension")
+    normalized_dimension = _normalize_dimension(reported_dimension)
+    if normalized_dimension != dimension.value:
         raise JudgeOutputValidationError("judge output dimension does not match request")
     try:
         label = JudgeLabel(value["label"])
@@ -115,8 +129,21 @@ def _parse_output(raw_output: str, dimension: JudgeDimension) -> _ParsedJudgeOut
     metadata = value.get("metadata", {})
     if not isinstance(metadata, dict):
         raise JudgeOutputValidationError("judge output metadata must be an object")
+    metadata = dict(metadata)
+    if reported_dimension != dimension.value:
+        metadata["reported_dimension"] = reported_dimension
+        metadata["dimension_normalized"] = normalized_dimension
     uncertainty_reason = metadata.get("reason_for_ambiguity")
     return _ParsedJudgeOutput(float(score), label, float(confidence) if confidence is not None else None, rationale, tuple(evidence), metadata, uncertainty_reason if isinstance(uncertainty_reason, str) else None, recovered)
+
+
+def _normalize_dimension(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().lower()
+    if normalized in {item.value for item in JudgeDimension}:
+        return normalized
+    return _DIMENSION_ALIASES.get(normalized)
 
 
 def _recover_json(raw_output: str) -> tuple[object, bool]:

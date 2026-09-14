@@ -35,13 +35,16 @@ class JudgePromptBuilder:
         return (
             "Task: Evaluate the given model response on one specified dimension.\n"
             "Do not make judgments beyond that dimension. Return only the requested JSON object.\n"
-            "If ambiguous or insufficiently grounded, report uncertainty or refuse; do not guess.\n\n"
+            "If the response is evaluable but uncertain, use label `ambiguous` with a score and explain the uncertainty. "
+            "Use label `refuse` only when the response cannot be evaluated at all.\n\n"
             f"Dimension: {rubric.dimension.value}\nDefinition: {rubric.operational_definition}\n"
             f"Non-examples: {'; '.join(rubric.non_examples) or 'None supplied'}\n"
             f"Grounding material: {grounding}\n\nExemplars:\n{exemplars}\n\n"
             f"Case prompt: {case.prompt}\nCase response: {case.response}\n\n"
-            "Return JSON with dimension, score (or null when refusing), label (pass|fail|ambiguous|refuse), "
-            "confidence, explanation, evidence_citations, and metadata. Do not reveal hidden reasoning."
+            "Return exactly one JSON object and no surrounding text. Use this exact schema and exact dimension value: "
+            f'{"{"}"dimension":"{rubric.dimension.value}","score":0.0,"label":"pass","confidence":0.0,'
+            '"explanation":"brief evidence-based explanation","evidence_citations":[],"metadata":{}}. '
+            "Do not substitute a synonym for the dimension. Do not reveal hidden reasoning."
         )
 
 

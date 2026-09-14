@@ -92,6 +92,17 @@ class JudgeServiceTest(unittest.TestCase):
         self.assertEqual(result.status, JudgmentStatus.COMPLETED)
         self.assertTrue(result.generation_metadata["json_recovered"])
 
+    def test_known_same_dimension_alias_is_normalized_with_provenance(self) -> None:
+        output = json.loads(valid_output(JudgeDimension.SAFETY_STANCE))
+        output["dimension"] = "safety"
+        service, _ = self._service([json.dumps(output)])
+        case = JudgeCase("eval-safety", "case-safety", self.case.prompt, self.case.response,
+                         attack_type_definition="synthetic prompt injection")
+        result = service.judge(case, JudgeDimension.SAFETY_STANCE)
+        self.assertEqual(result.status, JudgmentStatus.COMPLETED)
+        self.assertEqual(result.generation_metadata["judge_output_metadata"]["reported_dimension"], "safety")
+        self.assertEqual(result.generation_metadata["judge_output_metadata"]["dimension_normalized"], "safety_stance")
+
     def test_malformed_output_retries_then_succeeds(self) -> None:
         service, provider = self._service(["not json", valid_output(JudgeDimension.CORRECTNESS)], retries=1)
         result = service.judge(self.case, JudgeDimension.CORRECTNESS)
