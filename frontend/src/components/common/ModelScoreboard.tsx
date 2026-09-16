@@ -15,6 +15,7 @@ export function ModelScoreboard({ scores }: { scores: ModelScore[] }) {
         <span className="eyebrow">{score.status} · {score.formula_version}</span>
         <h2>{score.model_name}</h2>
         <p>Run <Link to={`/results/${encodeURIComponent(score.run_id)}`}>{score.run_id}</Link></p>
+        <small className="tested-at">Tested {new Date(score.created_at).toLocaleString()}</small>
       </div>
       <div className="score-meter" aria-label={`Model score ${pct(score.model_score)}`}>
         <strong>{pct(score.model_score)}</strong>

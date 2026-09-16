@@ -86,7 +86,7 @@ export function BenchmarkPage() {
     <div className="benchmark-panel job-panel"><h2>3. Review execution and evidence</h2>
       {jobs.isLoading && <LoadingState />}{jobs.isError && <ErrorState error={jobs.error} />}
       {jobs.data?.items.length === 0 && <p className="muted">No live jobs in this server session. Completed runs remain in the dashboard.</p>}
-      {jobs.data?.items.map((job) => <div className="job-row" key={job.id}><div><strong>{job.model}</strong><small>{job.provider} · {job.id}</small></div><span className={`status status-${job.status}`}>{job.status}</span>{job.error && <p>{job.error}</p>}{job.status !== "running" && job.status !== "failed" && <Link to={`/results/${job.id}`}>Open run report →</Link>}</div>)}
+      {jobs.data?.items.map((job) => <div className="job-row" key={job.id}><div><strong>{job.model}</strong><small>{job.provider} · {job.id}</small><p className="job-stage">{job.stage ?? "Awaiting status"}</p><small>{job.submitted_at ? `Started ${new Date(job.submitted_at).toLocaleString()}` : "Session job"}{job.completed_at ? ` · finished ${new Date(job.completed_at).toLocaleString()}` : ""}</small></div><span className={`status status-${job.status}`}>{job.status}</span>{job.error && <p>{job.error}</p>}{job.status !== "running" && job.status !== "failed" && <Link to={`/results/${job.id}`}>Open run report →</Link>}</div>)}
       <p><Link to="/runs">Browse persisted benchmark runs →</Link> · <Link to="/comparison">Compare saved model evidence →</Link></p>
     </div>
   </section>;

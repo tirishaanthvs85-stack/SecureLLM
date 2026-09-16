@@ -18,6 +18,7 @@ describe("model score dashboard", () => {
       formula_version: "engineering-detector-score-v1",
       formula: { model_score: "1 - mean(case_threat_score over completed evaluations)" },
       warnings: [],
+      created_at: '2026-09-16T00:00:00+00:00',
       provenance: { scientifically_validated: false },
     }]} />);
 

@@ -1,6 +1,7 @@
 """Explicitly enabled loopback-only execution of installed local models."""
 import threading
 import uuid
+from datetime import datetime, timezone
 from typing import Literal
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -60,13 +61,18 @@ def register_execution(app, database_url, enabled=False, remote_enabled=False):
             return {'items': [dict(job) for job in reversed(list(jobs.values()))]}
 
     def execute(job_id, run_spec):
-        try:
-            result = run_model(database_url=database_url, run_id=job_id, **run_spec)
+        def progress(stage):
             with lock:
-                jobs[job_id].update(status=result['status'], result=result)
+                jobs[job_id]["stage"] = stage
+        try:
+            result = run_model(database_url=database_url, run_id=job_id, progress_callback=progress, **run_spec)
+            with lock:
+                jobs[job_id].update(status=result['status'], stage='Completed and persisted', result=result,
+                                    completed_at=datetime.now(timezone.utc).isoformat())
         except Exception:
             with lock:
-                jobs[job_id].update(status='failed', error='Execution or persistence failed. Inspect local service logs and saved run artifacts.')
+                jobs[job_id].update(status='failed', stage='Failed before persistence', completed_at=datetime.now(timezone.utc).isoformat(),
+                                    error='Execution or persistence failed. Inspect local service logs and saved run artifacts.')
 
     @app.post('/internal/benchmark-jobs', status_code=202)
     def create_job(body: RunInput, request: Request):
@@ -92,7 +98,8 @@ def register_execution(app, database_url, enabled=False, remote_enabled=False):
             while len(jobs) >= 50:
                 del jobs[next(iter(jobs))]
             job_id = uuid.uuid4().hex
-            jobs[job_id] = {'id': job_id, 'model': body.model, 'provider': body.provider, 'status': 'running'}
+            jobs[job_id] = {'id': job_id, 'model': body.model, 'provider': body.provider, 'status': 'running',
+                            'stage': 'Job accepted; preparing benchmark source', 'submitted_at': datetime.now(timezone.utc).isoformat()}
             result = dict(jobs[job_id])
         run_spec = {'model_name': body.model, 'provider_kind': body.provider}
         if body.provider == 'openai-compatible':

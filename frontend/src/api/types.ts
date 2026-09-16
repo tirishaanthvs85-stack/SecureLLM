@@ -38,6 +38,7 @@ export interface ModelScore {
   formula_version: string;
   formula: Record<string, string>;
   warnings: string[];
+  created_at: string;
   provenance: Record<string, unknown>;
 }
 
@@ -81,6 +82,9 @@ export interface BenchmarkJob {
   provider: "ollama-local" | "openai-compatible";
   status: string;
   error?: string;
+  stage?: string;
+  submitted_at?: string;
+  completed_at?: string;
 }
 
 export interface BenchmarkRunInput {

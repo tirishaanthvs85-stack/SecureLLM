@@ -35,7 +35,10 @@ from scripts.import_repository_data import import_example
 
 
 def run_model(model_name, *, database_url=None, run_id=None, provider=None, inventory=None, output_directory=None,
-              provider_kind='ollama-local', endpoint=None, api_key=None):
+              provider_kind='ollama-local', endpoint=None, api_key=None, progress_callback=None):
+    def progress(stage):
+        if progress_callback is not None:
+            progress_callback(stage)
     if provider_kind not in {'ollama-local', 'openai-compatible'}:
         raise ValueError('Choose a supported model provider')
     if provider_kind == 'ollama-local':
@@ -56,6 +59,7 @@ def run_model(model_name, *, database_url=None, run_id=None, provider=None, inve
     run_id = run_id or uuid.uuid4().hex
     if not run_id.isalnum():
         raise ValueError('Run identity must be alphanumeric')
+    progress('Loading the existing benchmark source')
     source = ROOT / 'data/raw/example.json'
     source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     dataset = TextNormalizer().process(JsonDatasetLoader().load(source))
@@ -77,6 +81,7 @@ def run_model(model_name, *, database_url=None, run_id=None, provider=None, inve
         store = JsonBenchmarkStore(output_directory or ROOT / 'experiments/local-runs')
         if store.path_for(run_id).exists():
             raise ValueError('Run artifact already exists; use a new run identity')
+        progress('Generating responses for the three existing cases')
         run = BenchmarkEngine(InMemoryModelRegistry((model,)), execution_provider, store).run(
             dataset, BenchmarkConfig(model_name, run_id=run_id, generation=generation, seed=2026, concurrency=1))
         # Reuse the exact existing smoke-rule recipe; do not introduce a new security score.
@@ -87,6 +92,7 @@ def run_model(model_name, *, database_url=None, run_id=None, provider=None, inve
         )
         cells = []
         evaluation_scores = []
+        progress('Applying Layer 1 detectors and persisting evidence')
         with Session(engine) as session, session.begin():
             if session.get(ModelConfigEntity, config_id) is None:
                 session.add(ModelConfigEntity(id=config_id, model_name=model_name, payload={
@@ -149,6 +155,7 @@ def run_model(model_name, *, database_url=None, run_id=None, provider=None, inve
                 status=summary.computation_status.value, domain=summary,
                 provenance={**provenance, 'measurement': 'client_elapsed_latency_ms', 'units': 'ms', 'includes_model_loading': True,
                             'missing_responses': len(run.results) - len(latencies), 'descriptive_only': True}))
+        progress('Writing run summary')
         return {'run_id': run_id, 'model': model_name, 'provider': model_provider, 'status': run.status, 'evaluations': len(run.results),
                 'completed': sum(e.status == 'completed' for e in run.results)}
     finally:

@@ -78,6 +78,7 @@ def register_resources(app, factory):
                     "formula_version": payload.get("formula_version"),
                     "formula": payload.get("formula"),
                     "warnings": payload.get("warnings", []),
+                    "created_at": row.created_at,
                     "provenance": redact_configuration(row.provenance),
                 })
             return {"items": items, "total": total, "limit": limit, "offset": offset}
