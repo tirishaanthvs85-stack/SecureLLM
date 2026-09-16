@@ -82,6 +82,87 @@ def register_resources(app, factory):
                 })
             return {"items": items, "total": total, "limit": limit, "offset": offset}
 
+    @app.get("/benchmark-runs/{run_id}/report")
+    def benchmark_run_report(run_id: str):
+        """Return a read-only operational report from persisted run evidence.
+
+        This is deliberately a projection: it reports execution and detector
+        observations without converting them into attack outcomes or a safety
+        recommendation.
+        """
+        with factory() as session:
+            run = session.get(models.BenchmarkRunEntity, run_id)
+            if run is None:
+                raise HTTPException(404, "Benchmark run not found")
+            model = session.get(models.ModelConfigEntity, run.model_config_id)
+            evaluations = list(session.scalars(select(models.EvaluationResultEntity).where(
+                models.EvaluationResultEntity.benchmark_run_id == run_id
+            ).order_by(models.EvaluationResultEntity.created_at, models.EvaluationResultEntity.id)))
+            evaluation_ids = [row.id for row in evaluations]
+            layer_rows = list(session.scalars(select(models.LayerOneResultEntity).where(
+                models.LayerOneResultEntity.evaluation_result_id.in_(evaluation_ids)
+            ))) if evaluation_ids else []
+            score_record = session.scalar(select(models.ScientificRecordEntity).where(
+                models.ScientificRecordEntity.family == "model_score",
+                models.ScientificRecordEntity.owner_id == run_id,
+            ).order_by(models.ScientificRecordEntity.created_at.desc()))
+
+            completed = sum(row.execution_status == "completed" for row in evaluations)
+            failed = len(evaluations) - completed
+            latencies = [row.latency_ms for row in evaluations if row.latency_ms is not None]
+            by_evaluation: dict[str, list[models.LayerOneResultEntity]] = {}
+            for row in layer_rows:
+                by_evaluation.setdefault(row.evaluation_result_id, []).append(row)
+            detector_summary: dict[str, dict[str, object]] = {}
+            for row in layer_rows:
+                item = detector_summary.setdefault(row.detector_name, {"detector": row.detector_name, "max_score": 0.0, "observed_signal_count": 0})
+                item["max_score"] = max(float(item["max_score"]), row.score)
+                if row.score > 0:
+                    item["observed_signal_count"] = int(item["observed_signal_count"]) + 1
+            cases = []
+            for evaluation in evaluations:
+                signals = [
+                    {"detector": signal.detector_name, "score": signal.score, "confidence": signal.confidence}
+                    for signal in by_evaluation.get(evaluation.id, []) if signal.score > 0
+                ]
+                cases.append({
+                    "id": evaluation.id,
+                    "case_id": evaluation.case_id,
+                    "execution_status": evaluation.execution_status,
+                    "latency_ms": evaluation.latency_ms,
+                    "finish_reason": evaluation.provider_metadata.get("finish_reason"),
+                    "response_available": evaluation.response is not None,
+                    "observed_detector_signals": signals,
+                })
+            payload = score_record.payload if score_record else {}
+            coverage = payload.get("coverage", completed / len(evaluations) if evaluations else 0.0)
+            return {
+                "run": {"id": run.id, "status": run.status, "model_name": model.model_name if model else None,
+                        "model_config_id": run.model_config_id, "created_at": run.created_at},
+                "execution": {"total_cases": len(evaluations), "completed_cases": completed, "failed_cases": failed,
+                              "coverage": coverage, "mean_latency_ms": sum(latencies) / len(latencies) if latencies else None},
+                "detector_summary": sorted(detector_summary.values(), key=lambda item: str(item["detector"])),
+                "cases": cases,
+                "model_score": {
+                    "status": score_record.status if score_record else "not_computed",
+                    "value": payload.get("model_score"),
+                    "mean_threat_score": payload.get("mean_threat_score"),
+                    "worst_case_threat_score": payload.get("worst_case_threat_score"),
+                    "formula_version": payload.get("formula_version"),
+                    "formula": payload.get("formula"),
+                    "warnings": payload.get("warnings", []),
+                },
+                "selection": {
+                    "status": "evidence_review_required",
+                    "label": "More evidence required before model selection",
+                    "reason": "This run records execution and detector-native observations only. It has no independent human outcome labels or validated safety decision rule.",
+                },
+                "interpretation": {
+                    "observed_detector_signals": "Detector signals are observations, not confirmed successful attacks or ground-truth safety outcomes.",
+                    "model_score": "The model score is an engineering detector summary, not a safety rating, ranking, or recommendation.",
+                },
+            }
+
     def register(name, entity):
         allowed = FILTERS.intersection(entity.__table__.columns.keys())
 

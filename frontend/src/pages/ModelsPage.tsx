@@ -19,7 +19,7 @@ export function ModelsPage() {
     {jobs.isError && <ErrorState error={jobs.error} />}{jobs.data && jobs.data.items.length > 0 && <div className="research-note"><h2>Session execution jobs</h2><p>Completed evidence is retained under Benchmark runs. This live job list resets when the server restarts.</p>{jobs.data.items.map(job => <p key={job.id}><strong>{job.model}</strong> · {job.status} {job.error ?? ""} {job.status !== "running" && <Link to={`/evaluations?filter_by=benchmark_run_id&value=${job.id}`}>View results →</Link>}</p>)}</div>}
     <div className="section-divider" />
     <h2>Scored benchmark runs</h2>
-    <p>Model score is an engineering detector summary: higher means fewer detector-native threat signals in completed example evaluations. Supervised ML scoring remains blocked until independent outcome labels are present.</p>
+    <p>The detector summary shows fewer or more detector-native signals in completed example evaluations. Every model still requires evidence review before selection: independent outcome labels and a validated decision rule are not available.</p>
     {scores.isLoading && <LoadingState />}{scores.isError && <ErrorState error={scores.error} />}{scores.data && <ModelScoreboard scores={scores.data.items} />}
   </section><div className="section-divider" /><EntityPage title="Saved model configurations" resource="models" description="Exact model digests and generation settings used in persisted benchmark runs." /></>;
 }

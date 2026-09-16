@@ -14,11 +14,11 @@ export function ModelScoreboard({ scores }: { scores: ModelScore[] }) {
       <div>
         <span className="eyebrow">{score.status} · {score.formula_version}</span>
         <h2>{score.model_name}</h2>
-        <p>Run <Link to={`/evaluations?filter_by=benchmark_run_id&value=${encodeURIComponent(score.run_id)}`}>{score.run_id}</Link></p>
+        <p>Run <Link to={`/results/${encodeURIComponent(score.run_id)}`}>{score.run_id}</Link></p>
       </div>
       <div className="score-meter" aria-label={`Model score ${pct(score.model_score)}`}>
         <strong>{pct(score.model_score)}</strong>
-        <span>model score</span>
+        <span>detector summary</span>
         <div><i style={{ width: pct(score.model_score).replace("not computed", "0%") }} /></div>
       </div>
       <dl>
@@ -26,6 +26,7 @@ export function ModelScoreboard({ scores }: { scores: ModelScore[] }) {
         <div><dt>Worst case</dt><dd>{pct(score.worst_case_threat_score)}</dd></div>
         <div><dt>Coverage</dt><dd>{score.completed_evaluations}/{score.total_evaluations} ({pct(score.coverage)})</dd></div>
       </dl>
+      <p className="muted"><strong>Selection:</strong> evidence review required. This engineering summary cannot decide whether a model is safe to choose.</p>
       <details><summary>Formula and provenance</summary><pre>{JSON.stringify({ formula: score.formula, warnings: score.warnings, provenance: score.provenance }, null, 2)}</pre></details>
     </article>)}
   </div>;

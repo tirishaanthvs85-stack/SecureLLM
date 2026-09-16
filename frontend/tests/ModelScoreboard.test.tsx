@@ -25,7 +25,7 @@ describe("model score dashboard", () => {
     expect(screen.getByText("82.0%")).toBeInTheDocument();
     expect(screen.getByText("18.0%")).toBeInTheDocument();
     expect(screen.getByText("3/3 (100.0%)")).toBeInTheDocument();
-    expect(screen.getByText("run")).toHaveAttribute("href", "/evaluations?filter_by=benchmark_run_id&value=run");
+    expect(screen.getByText("run")).toHaveAttribute("href", "/results/run");
     expect(screen.getByText("Formula and provenance")).toBeInTheDocument();
   });
 });
