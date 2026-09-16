@@ -6,9 +6,9 @@ export default defineConfig({
   cacheDir: "../.tmp/vite",
   server: {
     proxy: Object.fromEntries([
-      "runtime-models", "benchmark-jobs", "internal/benchmark-jobs", "model-scores", "health", "ready", "scientific-records", "dashboard-summary", "datasets",
+      "runtime-models", "showcase-models", "benchmark-jobs", "internal/benchmark-jobs", "model-scores", "health", "ready", "scientific-records", "dashboard-summary", "datasets",
       "dataset-versions", "models", "benchmark-runs", "evaluations",
-      "layer1-results", "layer2-results", "scientific-reviews",
+      "layer1-results", "layer2-results", "scientific-reviews", "benchmark-runs",
     ].map(name => [`/${name}`, {
       target: "http://127.0.0.1:8000",
       bypass: (request: { headers: { accept?: string }; url?: string }) =>
