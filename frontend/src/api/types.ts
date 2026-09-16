@@ -85,6 +85,17 @@ export interface BenchmarkJob {
   stage?: string;
   submitted_at?: string;
   completed_at?: string;
+  completed_cases?: number;
+  total_cases?: number;
+  last_case_id?: string | null;
+  last_latency_ms?: number | null;
+}
+
+export interface CalibrationSummary {
+  status: string;
+  result: { source_n: number; usable_n: number; coverage: number; raw_agreement: number; cohen_kappa: number; confusion_matrix: { pred_0_label_0: number; pred_0_label_1: number; pred_1_label_0: number; pred_1_label_1: number } };
+  source_manifest: { dataset_revision: string; sha256: string; source_name: string };
+  interpretation: string;
 }
 
 export interface BenchmarkRunInput {

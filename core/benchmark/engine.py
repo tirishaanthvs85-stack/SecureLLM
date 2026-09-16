@@ -29,7 +29,7 @@ class BenchmarkEngine:
         """Load a processed supported dataset and execute it through the provider port."""
         return self.run(loader_for_path(dataset_path).load(dataset_path), config, resume=resume)
 
-    def run(self, dataset: Dataset, config: BenchmarkConfig, *, resume: bool = False) -> BenchmarkRun:
+    def run(self, dataset: Dataset, config: BenchmarkConfig, *, resume: bool = False, progress_callback=None) -> BenchmarkRun:
         model = self._registry.get(config.model_name)
         run_id = config.run_id or uuid.uuid4().hex
         cases = self._cases(dataset, run_id, config.seed)
@@ -39,7 +39,7 @@ class BenchmarkEngine:
         completed = {result.evaluation_id: result for result in existing.results if result.status == "completed"} if existing else {}
         pending = [case for case in cases if case.evaluation_id not in completed]
         logger.info("Executing benchmark run %s with %d pending cases", run_id, len(pending))
-        executed = self._execute_cases(pending, model, config)
+        executed = self._execute_cases(pending, model, config, progress_callback=progress_callback, total_cases=len(cases))
         results = tuple(sorted((*completed.values(), *executed), key=lambda result: result.case.dataset_index))
         status = "completed" if all(result.status == "completed" for result in results) else "completed_with_errors"
         run = BenchmarkRun(run_id, model, config.seed, config.generation, config.concurrency, config.max_retries, status, results)
@@ -56,10 +56,17 @@ class BenchmarkEngine:
             cases.append(EvaluationCase(evaluation_id, index, record.id, record.prompt, dict(record.metadata)))
         return tuple(cases)
 
-    def _execute_cases(self, cases: list[EvaluationCase], model: ModelMetadata, config: BenchmarkConfig) -> tuple[EvaluationResult, ...]:
+    def _execute_cases(self, cases: list[EvaluationCase], model: ModelMetadata, config: BenchmarkConfig, *, progress_callback=None, total_cases: int | None = None) -> tuple[EvaluationResult, ...]:
         with ThreadPoolExecutor(max_workers=config.concurrency, thread_name_prefix="benchmark") as executor:
             futures = [executor.submit(self._evaluate, case, model, config) for case in cases]
-            return tuple(future.result() for future in futures)
+            results: list[EvaluationResult] = []
+            for future in futures:
+                result = future.result()
+                results.append(result)
+                if progress_callback is not None:
+                    progress_callback("Generating responses", completed_cases=len(results), total_cases=total_cases or len(cases),
+                                      last_case_id=result.case.record_id, last_latency_ms=result.response.latency_ms if result.response else None)
+            return tuple(results)
 
     def _evaluate(self, case: EvaluationCase, model: ModelMetadata, config: BenchmarkConfig) -> EvaluationResult:
         for attempt in range(1, config.max_retries + 2):

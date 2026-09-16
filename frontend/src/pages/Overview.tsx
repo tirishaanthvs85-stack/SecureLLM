@@ -6,6 +6,9 @@ import { useModelScores } from "../api/hooks";
 import type { ModelScore } from "../api/types";
 import { ErrorState, LoadingState } from "../components/common/AsyncState";
 import { ModelScoreboard } from "../components/common/ModelScoreboard";
+import { LiveProgress } from "../components/benchmark/LiveProgress";
+import { CalibrationResults } from "../components/metrics/CalibrationResults";
+import { MetricStatusBoard } from "../components/metrics/MetricStatusBoard";
 
 const cards = [["datasets", "Datasets", "/datasets"], ["models", "Model configurations", "/models"], ["benchmark-runs", "Benchmark runs", "/runs"], ["evaluations", "Evaluations", "/evaluations"], ["model-scores", "Detector summaries", "/models"], ["scientific-records", "Scientific records", "/records"], ["scientific-reviews", "Scientific reviews", "/reviews"]];
 const catalogue = [
@@ -44,10 +47,16 @@ function RunTimeline({ scores }: { scores: ModelScore[] }) {
 export function Overview() {
   const query = useQuery({ queryKey: ["dashboard-summary"], queryFn: apiClient.summary, retry: false });
   const scores = useModelScores(5);
+  const jobs = useQuery({ queryKey: ["benchmark-jobs"], queryFn: apiClient.jobs, refetchInterval: 1000, retry: false });
+  const activeJob = jobs.data?.items.find(job => job.status === "running");
   return <section><div className="eyebrow">SecureLLMBench / Research workspace</div><h1>Evidence, in perspective.</h1><p className="lede">Test an installed model, inspect every persisted result, and keep operational observations separate from validated scientific conclusions.</p><p><Link className="primary-button inline-action" to="/benchmark">Test an LLM</Link></p>
     {query.isLoading && <LoadingState />}{query.isError && <ErrorState error={query.error} />}
     {query.data && <div className="stat-grid dashboard-counts">{cards.map(([key, label, path]) => <Link to={path} key={key}><article><span>{label}</span><strong>{query.data.counts[key]}</strong><small>Explore records →</small></article></Link>)}</div>}
+    {activeJob && <section className="active-test"><div className="section-title"><div><div className="eyebrow">Active benchmark</div><h2>{activeJob.model} is being tested</h2></div><span className="status status-running">Live</span></div><LiveProgress runId={activeJob.id} /></section>}
     {scores.data && <div className="dashboard-visuals"><div className="visual-primary">{scores.data.items[0] ? <CoverageRing score={scores.data.items[0]} /> : <article className="visual-card coverage-card"><div className="coverage-ring empty-ring"><strong>—</strong><span>coverage</span></div><div><span className="visual-label">Latest completed run</span><h3>Awaiting a benchmark</h3><p>Run an installed model to generate a persisted report.</p><Link to="/benchmark">Test an LLM →</Link></div></article>}<RunTimeline scores={scores.data.items} /></div><DetectorBars scores={scores.data.items} /></div>}
+    <div className="section-divider" />
+    <CalibrationResults />
+    <MetricStatusBoard />
     <div className="section-divider" />
     <h2>Detailed detector summaries</h2>
     {scores.isLoading && <LoadingState />}{scores.isError && <ErrorState error={scores.error} />}{scores.data && <ModelScoreboard scores={scores.data.items} />}

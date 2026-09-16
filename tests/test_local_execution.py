@@ -86,6 +86,7 @@ class LocalExecutionTests(unittest.TestCase):
             with patch('apps.api.local_execution.threading.Thread'):
                 first = client.post('/internal/benchmark-jobs', json={'model': 'test-model'}, headers={'X-SecureLLM-Local': '1'})
                 self.assertEqual(first.status_code, 202)
+                self.assertEqual(client.get(f"/benchmark-jobs/{first.json()['id']}").status_code, 200)
                 self.assertEqual(client.post('/internal/benchmark-jobs', json={'model': 'test-model'}, headers={'X-SecureLLM-Local': '1'}).status_code, 409)
 
     def test_discovery_failure_is_separate_from_empty_inventory(self):

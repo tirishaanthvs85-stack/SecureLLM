@@ -1,5 +1,5 @@
 import { endpoints } from "./endpoints";
-import { ApiError, type BenchmarkJob, type BenchmarkRunInput, type BenchmarkRunReport, type HealthStatus, type PaginatedModelScores, type PaginatedScientificRecords, type ReadinessStatus, type RuntimeModelsResponse, type ShowcaseModelsResponse } from "./types";
+import { ApiError, type BenchmarkJob, type BenchmarkRunInput, type BenchmarkRunReport, type CalibrationSummary, type HealthStatus, type PaginatedModelScores, type PaginatedScientificRecords, type ReadinessStatus, type RuntimeModelsResponse, type ShowcaseModelsResponse } from "./types";
 
 const baseUrl = import.meta.env.VITE_SECURELLM_API_BASE_URL ?? "";
 
@@ -25,6 +25,8 @@ export const apiClient = {
   runtimeModels: () => request<RuntimeModelsResponse>("/runtime-models"),
   showcaseModels: () => request<ShowcaseModelsResponse>("/showcase-models"),
   jobs: () => request<{ items: BenchmarkJob[] }>("/benchmark-jobs"),
+  job: (jobId: string) => request<BenchmarkJob>(`/benchmark-jobs/${encodeURIComponent(jobId)}`),
+  calibrationSummary: () => request<CalibrationSummary>("/calibration-summary"),
   startRun: (input: BenchmarkRunInput) => request<BenchmarkJob>("/internal/benchmark-jobs", { method: "POST", headers: { "Content-Type": "application/json", "X-SecureLLM-Local": "1" }, body: JSON.stringify(input) }),
   resources: (resource: string, offset = 0, filterBy?: string, value?: string) => {
     const query = new URLSearchParams({ limit: "25", offset: String(offset) });

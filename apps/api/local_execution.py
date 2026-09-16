@@ -60,10 +60,18 @@ def register_execution(app, database_url, enabled=False, remote_enabled=False):
         with lock:
             return {'items': [dict(job) for job in reversed(list(jobs.values()))]}
 
+    @app.get('/benchmark-jobs/{job_id}')
+    def get_job(job_id: str):
+        with lock:
+            job = jobs.get(job_id)
+            if job is None:
+                raise HTTPException(404, 'Benchmark job not found in this server session')
+            return dict(job)
+
     def execute(job_id, run_spec):
-        def progress(stage):
+        def progress(stage, **details):
             with lock:
-                jobs[job_id]["stage"] = stage
+                jobs[job_id].update(stage=stage, **details)
         try:
             result = run_model(database_url=database_url, run_id=job_id, progress_callback=progress, **run_spec)
             with lock:

@@ -1,6 +1,8 @@
 """Safe Phase 11 FastAPI surface: health/readiness and read-only scientific records."""
 import uuid
 import os
+import json
+from pathlib import Path
 from fastapi import FastAPI,Request,HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
@@ -35,6 +37,14 @@ def create_app(database_url:str="sqlite:///./securellmbench.db", *, enable_local
    with factory() as session:session.execute(text("SELECT 1"))
    return {"status":"ready"}
   except Exception:return JSONResponse(status_code=503,content={"status":"unavailable"})
+ @app.get("/calibration-summary")
+ def calibration_summary():
+  """Read-only aggregate calibration projection from the verified evidence artifact."""
+  path=Path(__file__).resolve().parents[2]/"artifacts"/"paper_evidence"/"calibration_verification.json"
+  try:
+   value=json.loads(path.read_text(encoding="utf-8"))
+   return {"status":value["status"],"result":value["recomputed"],"source_manifest":value["source_manifest"],"interpretation":"The current Gemma-based judge under the fixed predeclared mapping is not sufficiently validated to replace independent human outcome labels."}
+  except (OSError,KeyError,ValueError):raise HTTPException(503,"Verified calibration artifact is unavailable")
  @app.get("/scientific-records")
  def scientific_records(family:str|None=None,limit:int=50,offset:int=0):
   if limit<1 or limit>100 or offset<0:return JSONResponse(status_code=422,content={"code":"invalid_pagination"})
